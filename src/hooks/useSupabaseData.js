@@ -65,3 +65,57 @@ export const usePretestResponses = () => {
 export const useDemographicSurveys = () => {
   return useSupabaseData('demographic_surveys');
 };
+
+export const useParticipants = () => {
+  return useSupabaseData('participants');
+};
+
+// Hook to get only active participants (id_used = true)
+export const useActiveParticipants = () => {
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const { data: result, error } = await supabase
+        .from('participants')
+        .select('*')
+        .eq('id_used', true)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setData(result || []);
+    } catch (err) {
+      setError(err.message);
+      console.error('Error fetching active participants:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+    
+    const interval = setInterval(fetchData, AUTO_REFRESH_INTERVAL);
+    
+    const subscription = supabase
+      .channel('participants_changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'participants' },
+        () => {
+          fetchData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      clearInterval(interval);
+      subscription.unsubscribe();
+    };
+  }, [fetchData]);
+
+  return { data, loading, error, refetch: fetchData };
+};

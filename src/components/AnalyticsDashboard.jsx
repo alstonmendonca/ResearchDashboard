@@ -417,21 +417,23 @@ const AnalyticsDashboard = ({ appUsageData, pretestData, demographicsData }) => 
     }]
   };
 
-  // Demographic distribution
-  const demographicCharts = Object.entries(analytics.demographicDistribution).map(([field, distribution]) => ({
-    field,
-    chart: {
-      labels: Object.keys(distribution),
-      datasets: [{
-        data: Object.values(distribution),
-        backgroundColor: [
-          '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', 
-          '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1'
-        ],
-        borderWidth: 0
-      }]
-    }
-  }));
+  // Demographic distribution (exclude participant_id and sample_code)
+  const demographicCharts = Object.entries(analytics.demographicDistribution)
+    .filter(([field]) => field !== 'participant_id' && field !== 'sample_code')
+    .map(([field, distribution]) => ({
+      field,
+      chart: {
+        labels: Object.keys(distribution),
+        datasets: [{
+          data: Object.values(distribution),
+          backgroundColor: [
+            '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', 
+            '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1'
+          ],
+          borderWidth: 0
+        }]
+      }
+    }));
 
   const exportAnalytics = () => {
     const workbook = XLSX.utils.book_new();

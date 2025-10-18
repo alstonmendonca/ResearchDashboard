@@ -16,16 +16,55 @@ import DataTable from './DataTable';
 import EnhancedDataTable from './EnhancedDataTable';
 import DataCharts from './DataCharts';
 import AnalyticsDashboard from './AnalyticsDashboard';
-import { useAppUsageSessions, usePretestResponses, useDemographicSurveys } from '../hooks/useSupabaseData';
+import { useAppUsageSessions, usePretestResponses, useDemographicSurveys, useActiveParticipants } from '../hooks/useSupabaseData';
 
 const Dashboard = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [groupFilter, setGroupFilter] = useState('all'); // 'all', 'Intervention', 'Control'
 
   // Fetch data from Supabase
   const appUsage = useAppUsageSessions();
   const pretestData = usePretestResponses();
   const demographicsData = useDemographicSurveys();
+  const participants = useActiveParticipants(); // Only active participants (id_used = true)
+
+  // Filter data based on selected group
+  const getFilteredData = () => {
+    // Create a map of participant numbers to groups
+    const participantGroupMap = participants.data.reduce((map, p) => {
+      map[p.participant_number] = p.Group;
+      return map;
+    }, {});
+
+    // Enrich pretest data with group information
+    const enrichedPretestData = pretestData.data.map(p => ({
+      ...p,
+      group: participantGroupMap[p.participant_number] || 'Unknown'
+    }));
+
+    if (groupFilter === 'all') {
+      return {
+        participants: participants.data,
+        appUsage: appUsage.data,
+        pretestData: enrichedPretestData,
+        demographicsData: demographicsData.data
+      };
+    }
+
+    const participantNumbers = participants.data
+      .filter(p => p.Group === groupFilter)
+      .map(p => p.participant_number);
+
+    return {
+      participants: participants.data.filter(p => p.Group === groupFilter),
+      appUsage: appUsage.data.filter(s => participantNumbers.includes(s.participant_number)),
+      pretestData: enrichedPretestData.filter(p => participantNumbers.includes(p.participant_number)),
+      demographicsData: demographicsData.data.filter(d => participantNumbers.includes(d.participant_id))
+    };
+  };
+
+  const filteredData = getFilteredData();
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
@@ -221,6 +260,20 @@ const Dashboard = ({ onLogout }) => {
               </p>
             </div>
           </div>
+          
+          {/* Group Filter */}
+          <div className="flex items-center space-x-3">
+            <label className="text-sm font-medium text-gray-700">Group:</label>
+            <select
+              value={groupFilter}
+              onChange={(e) => setGroupFilter(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-900 focus:border-transparent bg-white"
+            >
+              <option value="all">All Participants</option>
+              <option value="Intervention">Intervention Group</option>
+              <option value="Control">Control Group</option>
+            </select>
+          </div>
         </header>
 
         {/* Main Content */}
@@ -233,9 +286,26 @@ const Dashboard = ({ onLogout }) => {
                   <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between">
                       <div>
+                        <p className="text-sm font-medium text-gray-500">Active Participants</p>
+                        <p className="text-2xl font-bold text-gray-900">
+                          {participants.loading ? '...' : filteredData.participants.length}
+                        </p>
+                        <p className="text-xs text-gray-600 mt-1">ID used & registered</p>
+                      </div>
+                      <div className="p-2 bg-gray-100 rounded-lg">
+                        <Users className="w-6 h-6 text-blue-900" />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+                    <div className="flex items-center justify-between">
+                      <div>
                         <p className="text-sm font-medium text-gray-500">App Sessions</p>
-                        <p className="text-2xl font-bold text-gray-900">{appUsage.loading ? '...' : appUsage.data.length}</p>
-                        <p className="text-xs text-gray-600 mt-1">↗ +12% from last week</p>
+                        <p className="text-2xl font-bold text-gray-900">
+                          {appUsage.loading ? '...' : filteredData.appUsage.length}
+                        </p>
+                        <p className="text-xs text-gray-600 mt-1">Total usage sessions</p>
                       </div>
                       <div className="p-2 bg-gray-100 rounded-lg">
                         <Activity className="w-6 h-6 text-blue-900" />
@@ -246,25 +316,14 @@ const Dashboard = ({ onLogout }) => {
                   <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-gray-500">Pretest Responses</p>
-                        <p className="text-2xl font-bold text-gray-900">{pretestData.loading ? '...' : pretestData.data.length}</p>
-                        <p className="text-xs text-gray-600 mt-1">↗ +8% from last week</p>
+                        <p className="text-sm font-medium text-gray-500">Demographics Completed</p>
+                        <p className="text-2xl font-bold text-gray-900">
+                          {participants.loading ? '...' : filteredData.participants.filter(p => p.demographic_survey_completed).length}
+                        </p>
+                        <p className="text-xs text-gray-600 mt-1">Survey completion rate</p>
                       </div>
                       <div className="p-2 bg-gray-100 rounded-lg">
                         <FileText className="w-6 h-6 text-blue-900" />
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">Demographics</p>
-                        <p className="text-2xl font-bold text-gray-900">{demographicsData.loading ? '...' : demographicsData.data.length}</p>
-                        <p className="text-xs text-gray-600 mt-1">↗ +5% from last week</p>
-                      </div>
-                      <div className="p-2 bg-gray-100 rounded-lg">
-                        <Users className="w-6 h-6 text-blue-900" />
                       </div>
                     </div>
                   </div>
@@ -275,8 +334,8 @@ const Dashboard = ({ onLogout }) => {
                         <p className="text-sm font-medium text-gray-500">Avg Session Time</p>
                         <p className="text-2xl font-bold text-gray-900">
                           {appUsage.loading ? '...' : 
-                            appUsage.data.length > 0 ? 
-                              Math.round(appUsage.data.reduce((sum, session) => sum + (session.duration_minutes || 0), 0) / appUsage.data.length) + 'm'
+                            filteredData.appUsage.length > 0 ? 
+                              Math.round(filteredData.appUsage.reduce((sum, session) => sum + (session.duration_minutes || 0), 0) / filteredData.appUsage.length) + 'm'
                               : '0m'
                           }
                         </p>
@@ -285,6 +344,149 @@ const Dashboard = ({ onLogout }) => {
                       <div className="p-2 bg-orange-100 rounded-lg">
                         <BarChart3 className="w-6 h-6 text-orange-600" />
                       </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Additional Research Statistics */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {/* Group Distribution */}
+                  <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Group Distribution</h3>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">Intervention Group</span>
+                        <span className="text-lg font-bold text-blue-900">
+                          {participants.loading ? '...' : participants.data.filter(p => p.Group === 'Intervention').length}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">Control Group</span>
+                        <span className="text-lg font-bold text-blue-900">
+                          {participants.loading ? '...' : participants.data.filter(p => p.Group === 'Control').length}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between pt-2 border-t">
+                        <span className="text-sm font-medium text-gray-700">Total Active</span>
+                        <span className="text-lg font-bold text-gray-900">
+                          {participants.loading ? '...' : participants.data.length}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* WHO-5 Well-Being Score */}
+                  <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">WHO-5 Well-Being</h3>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">Average Score</span>
+                        <span className="text-lg font-bold text-blue-900">
+                          {pretestData.loading || filteredData.pretestData.length === 0 ? '...' : 
+                            ((filteredData.pretestData.reduce((sum, p) => 
+                              sum + (p.who5_cheerful + p.who5_calm + p.who5_active + p.who5_rested + p.who5_interested), 0
+                            ) / filteredData.pretestData.length / 5) * 25).toFixed(1)
+                          }%
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">Responses</span>
+                        <span className="text-lg font-bold text-blue-900">
+                          {filteredData.pretestData.length}
+                        </span>
+                      </div>
+                      <div className="pt-2 border-t">
+                        <p className="text-xs text-gray-500">Scale: 0-100% (higher is better)</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* PSS-4 Stress Score */}
+                  <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">PSS-4 Stress Level</h3>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">Average Score</span>
+                        <span className="text-lg font-bold text-blue-900">
+                          {pretestData.loading || filteredData.pretestData.length === 0 ? '...' : 
+                            (filteredData.pretestData.reduce((sum, p) => 
+                              sum + (p.pss4_unable_control + (5-p.pss4_confident_handle) + (5-p.pss4_going_your_way) + p.pss4_difficulties_piling), 0
+                            ) / filteredData.pretestData.length).toFixed(1)
+                          }
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">Responses</span>
+                        <span className="text-lg font-bold text-blue-900">
+                          {filteredData.pretestData.length}
+                        </span>
+                      </div>
+                      <div className="pt-2 border-t">
+                        <p className="text-xs text-gray-500">Scale: 0-16 (higher = more stress)</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Nurse Demographics */}
+                  <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Registered Nurses</h3>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">RN Count</span>
+                        <span className="text-lg font-bold text-blue-900">
+                          {pretestData.loading ? '...' : filteredData.pretestData.filter(p => p.is_registered_nurse).length}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">Non-RN Count</span>
+                        <span className="text-lg font-bold text-blue-900">
+                          {pretestData.loading ? '...' : filteredData.pretestData.filter(p => !p.is_registered_nurse).length}
+                        </span>
+                      </div>
+                      <div className="pt-2 border-t">
+                        <p className="text-xs text-gray-500">Professional qualification status</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Consent Status */}
+                  <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Consent & Compliance</h3>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">Consented</span>
+                        <span className="text-lg font-bold text-blue-900">
+                          {pretestData.loading ? '...' : filteredData.pretestData.filter(p => p.provides_consent).length}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">Understands Voluntary</span>
+                        <span className="text-lg font-bold text-blue-900">
+                          {pretestData.loading ? '...' : filteredData.pretestData.filter(p => p.understands_voluntary).length}
+                        </span>
+                      </div>
+                      <div className="pt-2 border-t">
+                        <p className="text-xs text-gray-500">Ethics compliance tracking</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Burnout Status */}
+                  <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Burnout Levels</h3>
+                    <div className="space-y-2">
+                      {pretestData.loading ? '...' : (() => {
+                        const burnoutCounts = filteredData.pretestData.reduce((acc, p) => {
+                          acc[p.burnout_level] = (acc[p.burnout_level] || 0) + 1;
+                          return acc;
+                        }, {});
+                        return Object.entries(burnoutCounts).map(([level, count]) => (
+                          <div key={level} className="flex items-center justify-between">
+                            <span className="text-xs text-gray-600 capitalize">{level?.replace(/_/g, ' ')}</span>
+                            <span className="text-sm font-bold text-blue-900">{count}</span>
+                          </div>
+                        ));
+                      })()}
                     </div>
                   </div>
                 </div>
@@ -308,6 +510,7 @@ const Dashboard = ({ onLogout }) => {
                         appUsage.refetch();
                         pretestData.refetch();
                         demographicsData.refetch();
+                        participants.refetch();
                       }}
                       className="flex items-center justify-center p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors group"
                     >
@@ -445,15 +648,15 @@ const Dashboard = ({ onLogout }) => {
 
             {activeTab === 'analytics' && (
               <AnalyticsDashboard
-                appUsageData={appUsage.data}
-                pretestData={pretestData.data}
-                demographicsData={demographicsData.data}
+                appUsageData={filteredData.appUsage}
+                pretestData={filteredData.pretestData}
+                demographicsData={filteredData.demographicsData}
               />
             )}
 
             {activeTab === 'app-usage' && (
               <EnhancedDataTable
-                data={appUsage.data}
+                data={filteredData.appUsage}
                 loading={appUsage.loading}
                 error={appUsage.error}
                 title="App Usage Sessions"
@@ -463,7 +666,7 @@ const Dashboard = ({ onLogout }) => {
 
             {activeTab === 'pretest' && (
               <EnhancedDataTable
-                data={pretestData.data}
+                data={filteredData.pretestData}
                 loading={pretestData.loading}
                 error={pretestData.error}
                 title="Pretest Responses"
@@ -473,7 +676,7 @@ const Dashboard = ({ onLogout }) => {
 
             {activeTab === 'demographics' && (
               <EnhancedDataTable
-                data={demographicsData.data}
+                data={filteredData.demographicsData}
                 loading={demographicsData.loading}
                 error={demographicsData.error}
                 title="Demographic Surveys"
