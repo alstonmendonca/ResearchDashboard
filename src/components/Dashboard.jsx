@@ -569,15 +569,28 @@ const Dashboard = ({ onLogout }) => {
                       <p className="text-sm text-gray-600 mb-1">Avg COPE Score</p>
                       <p className="text-3xl font-bold text-blue-900">
                         {posttestData.loading || filteredData.posttestData.length === 0 ? '...' : 
-                          (filteredData.posttestData.reduce((sum, p) => 
-                            sum + (
-                              p.cope_concentrating + p.cope_taking_action + p.cope_strategy + 
-                              p.cope_thinking_steps + p.cope_different_light + p.cope_looking_good + 
-                              p.cope_accepting_reality + p.cope_learning_live + p.cope_emotional_support + 
-                              p.cope_comfort_understanding + p.cope_work_activities + p.cope_movies_tv_reading + 
-                              p.cope_criticizing_myself + p.cope_blaming_myself
-                            ), 0
-                          ) / filteredData.posttestData.length / 14).toFixed(1)
+                          (() => {
+                            const total = filteredData.posttestData.reduce((sum, p) => {
+                              const copeSum = (
+                                (p.cope_concentrating || p.cope_concentrating_efforts || 0) + 
+                                (p.cope_taking_action || 0) + 
+                                (p.cope_strategy || 0) + 
+                                (p.cope_thinking_steps || 0) + 
+                                (p.cope_different_light || 0) + 
+                                (p.cope_looking_good || 0) + 
+                                (p.cope_accepting_reality || 0) + 
+                                (p.cope_learning_live || 0) + 
+                                (p.cope_emotional_support || 0) + 
+                                (p.cope_comfort_understanding || 0) + 
+                                (p.cope_work_activities || 0) + 
+                                (p.cope_movies_tv_reading || 0) + 
+                                (p.cope_criticizing_myself || 0) + 
+                                (p.cope_blaming_myself || 0)
+                              );
+                              return sum + copeSum;
+                            }, 0);
+                            return (total / filteredData.posttestData.length / 14).toFixed(1);
+                          })()
                         }
                       </p>
                       <p className="text-xs text-gray-500 mt-1">Coping strategies</p>
@@ -852,13 +865,295 @@ const Dashboard = ({ onLogout }) => {
             )}
 
             {activeTab === 'posttest' && (
-              <EnhancedDataTable
-                data={filteredData.posttestData}
-                loading={posttestData.loading}
-                error={posttestData.error}
-                title="Posttest Responses"
-                type="posttest"
-              />
+              <div className="space-y-6">
+                <EnhancedDataTable
+                  data={filteredData.posttestData}
+                  loading={posttestData.loading}
+                  error={posttestData.error}
+                  title="Posttest Responses"
+                  type="posttest"
+                />
+
+                {/* Posttest Statistics & Analytics */}
+                {!posttestData.loading && filteredData.posttestData.length > 0 && (
+                  <>
+                    {/* Summary Statistics */}
+                    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                      <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center">
+                        <BarChart3 className="w-5 h-5 text-blue-900 mr-2" />
+                        Posttest Response Analytics
+                      </h3>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {/* WHO-5 Distribution */}
+                        <div className="border border-gray-200 rounded-lg p-4">
+                          <h4 className="text-sm font-semibold text-gray-700 mb-3">WHO-5 Well-Being</h4>
+                          <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs text-gray-600">Average</span>
+                              <span className="text-lg font-bold text-blue-900">
+                                {((filteredData.posttestData.reduce((sum, p) => 
+                                  sum + (p.who5_cheerful + p.who5_calm + p.who5_active + p.who5_rested + p.who5_interested), 0
+                                ) / filteredData.posttestData.length / 5) * 25).toFixed(1)}%
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs text-gray-600">Highest</span>
+                              <span className="text-sm font-bold text-gray-700">
+                                {Math.max(...filteredData.posttestData.map(p => 
+                                  ((p.who5_cheerful + p.who5_calm + p.who5_active + p.who5_rested + p.who5_interested) / 5) * 25
+                                )).toFixed(1)}%
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs text-gray-600">Lowest</span>
+                              <span className="text-sm font-bold text-gray-700">
+                                {Math.min(...filteredData.posttestData.map(p => 
+                                  ((p.who5_cheerful + p.who5_calm + p.who5_active + p.who5_rested + p.who5_interested) / 5) * 25
+                                )).toFixed(1)}%
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* PSS-4 Distribution */}
+                        <div className="border border-gray-200 rounded-lg p-4">
+                          <h4 className="text-sm font-semibold text-gray-700 mb-3">PSS-4 Stress Level</h4>
+                          <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs text-gray-600">Average</span>
+                              <span className="text-lg font-bold text-blue-900">
+                                {(filteredData.posttestData.reduce((sum, p) => 
+                                  sum + (p.pss4_unable_control + (5-p.pss4_confident_handle) + (5-p.pss4_going_your_way) + p.pss4_difficulties_piling), 0
+                                ) / filteredData.posttestData.length).toFixed(1)}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs text-gray-600">Highest</span>
+                              <span className="text-sm font-bold text-gray-700">
+                                {Math.max(...filteredData.posttestData.map(p => 
+                                  p.pss4_unable_control + (5-p.pss4_confident_handle) + (5-p.pss4_going_your_way) + p.pss4_difficulties_piling
+                                )).toFixed(1)}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs text-gray-600">Lowest</span>
+                              <span className="text-sm font-bold text-gray-700">
+                                {Math.min(...filteredData.posttestData.map(p => 
+                                  p.pss4_unable_control + (5-p.pss4_confident_handle) + (5-p.pss4_going_your_way) + p.pss4_difficulties_piling
+                                )).toFixed(1)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Burnout Distribution */}
+                        <div className="border border-gray-200 rounded-lg p-4">
+                          <h4 className="text-sm font-semibold text-gray-700 mb-3">Burnout Status</h4>
+                          <div className="space-y-2">
+                            {(() => {
+                              const burnoutCounts = filteredData.posttestData.reduce((acc, p) => {
+                                acc[p.burnout_level] = (acc[p.burnout_level] || 0) + 1;
+                                return acc;
+                              }, {});
+                              return Object.entries(burnoutCounts).map(([level, count]) => (
+                                <div key={level} className="flex justify-between items-center">
+                                  <span className="text-xs text-gray-600 capitalize">{level?.replace(/_/g, ' ')}</span>
+                                  <span className="text-sm font-bold text-blue-900">{count}</span>
+                                </div>
+                              ));
+                            })()}
+                          </div>
+                        </div>
+
+                        {/* Group Comparison */}
+                        <div className="border border-gray-200 rounded-lg p-4">
+                          <h4 className="text-sm font-semibold text-gray-700 mb-3">Group Breakdown</h4>
+                          <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs text-gray-600">Intervention</span>
+                              <span className="text-lg font-bold text-blue-900">
+                                {filteredData.posttestData.filter(p => p.group_assignment === 'Intervention').length}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs text-gray-600">Control</span>
+                              <span className="text-lg font-bold text-blue-900">
+                                {filteredData.posttestData.filter(p => p.group_assignment === 'Control').length}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center pt-2 border-t">
+                              <span className="text-xs text-gray-600">Total</span>
+                              <span className="text-sm font-bold text-gray-700">
+                                {filteredData.posttestData.length}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Comparative Analysis */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {/* WHO-5 Component Breakdown */}
+                      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                        <h4 className="text-md font-bold text-gray-900 mb-4">WHO-5 Component Scores</h4>
+                        <div className="space-y-3">
+                          {[
+                            { key: 'who5_cheerful', label: 'Cheerful & Good Spirits' },
+                            { key: 'who5_calm', label: 'Calm & Relaxed' },
+                            { key: 'who5_active', label: 'Active & Vigorous' },
+                            { key: 'who5_rested', label: 'Fresh & Rested' },
+                            { key: 'who5_interested', label: 'Interested in Things' }
+                          ].map(({ key, label }) => {
+                            const avg = (filteredData.posttestData.reduce((sum, p) => sum + (p[key] || 0), 0) / filteredData.posttestData.length).toFixed(2);
+                            const percentage = (avg / 5) * 100;
+                            return (
+                              <div key={key}>
+                                <div className="flex justify-between mb-1">
+                                  <span className="text-sm text-gray-700">{label}</span>
+                                  <span className="text-sm font-bold text-blue-900">{avg}/5</span>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-2">
+                                  <div 
+                                    className="bg-blue-900 h-2 rounded-full transition-all duration-500" 
+                                    style={{ width: `${percentage}%` }}
+                                  ></div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* PSS-4 Component Breakdown */}
+                      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                        <h4 className="text-md font-bold text-gray-900 mb-4">PSS-4 Stress Components</h4>
+                        <div className="space-y-3">
+                          {[
+                            { key: 'pss4_unable_control', label: 'Unable to Control', reversed: false },
+                            { key: 'pss4_confident_handle', label: 'Confident Handling', reversed: true },
+                            { key: 'pss4_going_your_way', label: 'Things Going Your Way', reversed: true },
+                            { key: 'pss4_difficulties_piling', label: 'Difficulties Piling Up', reversed: false }
+                          ].map(({ key, label, reversed }) => {
+                            const avg = (filteredData.posttestData.reduce((sum, p) => {
+                              const val = p[key] || 0;
+                              return sum + (reversed ? (5 - val) : val);
+                            }, 0) / filteredData.posttestData.length).toFixed(2);
+                            const percentage = (avg / 5) * 100;
+                            return (
+                              <div key={key}>
+                                <div className="flex justify-between mb-1">
+                                  <span className="text-sm text-gray-700">{label}</span>
+                                  <span className="text-sm font-bold text-blue-900">{avg}/5</span>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-2">
+                                  <div 
+                                    className="bg-blue-900 h-2 rounded-full transition-all duration-500" 
+                                    style={{ width: `${percentage}%` }}
+                                  ></div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* COPE Strategies Analysis */}
+                    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                      <h4 className="text-md font-bold text-gray-900 mb-4">Brief COPE Coping Strategies</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {[
+                          { key: 'cope_concentrating', altKey: 'cope_concentrating_efforts', label: 'Concentrating Efforts' },
+                          { key: 'cope_taking_action', label: 'Taking Action' },
+                          { key: 'cope_strategy', label: 'Strategy Planning' },
+                          { key: 'cope_thinking_steps', label: 'Thinking About Steps' },
+                          { key: 'cope_different_light', label: 'Different Perspective' },
+                          { key: 'cope_looking_good', label: 'Looking for Positives' },
+                          { key: 'cope_accepting_reality', label: 'Accepting Reality' },
+                          { key: 'cope_learning_live', label: 'Learning to Live With It' },
+                          { key: 'cope_emotional_support', label: 'Seeking Emotional Support' },
+                          { key: 'cope_comfort_understanding', label: 'Comfort & Understanding' },
+                          { key: 'cope_work_activities', label: 'Work/Activities' },
+                          { key: 'cope_movies_tv_reading', label: 'Entertainment/Reading' },
+                          { key: 'cope_criticizing_myself', label: 'Self-Criticism' },
+                          { key: 'cope_blaming_myself', label: 'Self-Blame' }
+                        ].map(({ key, altKey, label }) => {
+                          const avg = (filteredData.posttestData.reduce((sum, p) => 
+                            sum + (p[key] || p[altKey] || 0), 0
+                          ) / filteredData.posttestData.length).toFixed(2);
+                          const percentage = (avg / 4) * 100;
+                          return (
+                            <div key={key} className="border border-gray-100 rounded-lg p-3">
+                              <div className="flex justify-between mb-2">
+                                <span className="text-xs text-gray-600">{label}</span>
+                                <span className="text-sm font-bold text-blue-900">{avg}</span>
+                              </div>
+                              <div className="w-full bg-gray-200 rounded-full h-1.5">
+                                <div 
+                                  className="bg-blue-900 h-1.5 rounded-full" 
+                                  style={{ width: `${percentage}%` }}
+                                ></div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Qualitative Feedback Summary */}
+                    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                      <h4 className="text-md font-bold text-gray-900 mb-4">App Feedback Summary</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                          <h5 className="text-sm font-semibold text-gray-700 mb-2">Responses with Comments</h5>
+                          <p className="text-3xl font-bold text-blue-900">
+                            {filteredData.posttestData.filter(p => 
+                              p.additional_comments && p.additional_comments.trim() !== '' && 
+                              p.additional_comments.toLowerCase() !== 'nil' && 
+                              p.additional_comments.toLowerCase() !== 'nothing'
+                            ).length}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {((filteredData.posttestData.filter(p => 
+                              p.additional_comments && p.additional_comments.trim() !== '' && 
+                              p.additional_comments.toLowerCase() !== 'nil' && 
+                              p.additional_comments.toLowerCase() !== 'nothing'
+                            ).length / filteredData.posttestData.length) * 100).toFixed(1)}% of responses
+                          </p>
+                        </div>
+                        <div>
+                          <h5 className="text-sm font-semibold text-gray-700 mb-2">Helpful Features Mentioned</h5>
+                          <p className="text-3xl font-bold text-blue-900">
+                            {filteredData.posttestData.filter(p => 
+                              p.app_helpful_features && p.app_helpful_features.trim() !== '' &&
+                              p.app_helpful_features.toLowerCase() !== 'nil' &&
+                              p.app_helpful_features.toLowerCase() !== 'nothing'
+                            ).length}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Feature feedback provided
+                          </p>
+                        </div>
+                        <div>
+                          <h5 className="text-sm font-semibold text-gray-700 mb-2">Technical Issues Reported</h5>
+                          <p className="text-3xl font-bold text-blue-900">
+                            {filteredData.posttestData.filter(p => 
+                              p.app_technical_issues && p.app_technical_issues.trim() !== '' &&
+                              p.app_technical_issues.toLowerCase() !== 'nil' &&
+                              p.app_technical_issues.toLowerCase() !== 'nothing'
+                            ).length}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Issues need attention
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
             )}
 
             {activeTab === 'demographics' && (
