@@ -45,10 +45,14 @@ const EnhancedDataTable = ({ data, loading, error, title, type }) => {
         }
       }
       
-      // Group filter (for pretest responses)
+      // Group filter (for pretest and posttest responses)
       let groupMatch = true;
-      if (groupFilter !== 'all' && item.group) {
-        groupMatch = item.group === groupFilter;
+      if (groupFilter !== 'all') {
+        // For posttest, use group_assignment; for pretest, use group
+        const groupField = item.group_assignment || item.group;
+        if (groupField) {
+          groupMatch = groupField === groupFilter;
+        }
       }
       
       return searchMatch && dateMatch && groupMatch;
@@ -213,8 +217,8 @@ const EnhancedDataTable = ({ data, loading, error, title, type }) => {
                 </div>
               </div>
               
-              {/* Group Filter - Only show for pretest responses */}
-              {type === 'pretest' && (
+              {/* Group Filter - Show for pretest and posttest responses */}
+              {(type === 'pretest' || type === 'posttest') && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Group</label>
                   <div className="relative">

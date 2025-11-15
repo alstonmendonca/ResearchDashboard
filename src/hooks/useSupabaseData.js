@@ -71,6 +71,10 @@ export const useParticipants = () => {
 };
 
 // Hook to get only active participants (id_used = true)
+export const usePosttestResponses = () => {
+  return useSupabaseData('posttest_responses');
+};
+
 export const useActiveParticipants = () => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
