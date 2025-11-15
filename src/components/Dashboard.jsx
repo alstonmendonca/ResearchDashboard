@@ -1151,6 +1151,176 @@ const Dashboard = ({ onLogout }) => {
                         </div>
                       </div>
                     </div>
+
+                    {/* Detailed Feedback & Comments Section */}
+                    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                      <h4 className="text-md font-bold text-gray-900 mb-4 flex items-center">
+                        <FileText className="w-5 h-5 text-blue-900 mr-2" />
+                        Participant Feedback & Comments
+                      </h4>
+                      
+                      <div className="space-y-6">
+                        {/* Additional Comments */}
+                        <div>
+                          <h5 className="text-sm font-semibold text-gray-700 mb-3 pb-2 border-b border-gray-200">
+                            Additional Comments
+                          </h5>
+                          <div className="space-y-3">
+                            {filteredData.posttestData.filter(p => 
+                              p.additional_comments && 
+                              p.additional_comments.trim() !== '' && 
+                              p.additional_comments.toLowerCase() !== 'nil' &&
+                              p.additional_comments.toLowerCase() !== 'nothing'
+                            ).length > 0 ? (
+                              filteredData.posttestData
+                                .filter(p => 
+                                  p.additional_comments && 
+                                  p.additional_comments.trim() !== '' && 
+                                  p.additional_comments.toLowerCase() !== 'nil' &&
+                                  p.additional_comments.toLowerCase() !== 'nothing'
+                                )
+                                .map((p, idx) => (
+                                  <div key={idx} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                    <div className="flex items-start justify-between mb-2">
+                                      <span className="text-xs font-semibold text-blue-900">
+                                        {p.group_assignment || 'Unknown'} Group
+                                      </span>
+                                      <span className="text-xs text-gray-500">
+                                        {p.submitted_at ? new Date(p.submitted_at).toLocaleDateString() : 'N/A'}
+                                      </span>
+                                    </div>
+                                    <p className="text-sm text-gray-700 leading-relaxed">
+                                      {p.additional_comments}
+                                    </p>
+                                  </div>
+                                ))
+                            ) : (
+                              <p className="text-sm text-gray-500 italic">No additional comments provided</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Helpful Features */}
+                        <div>
+                          <h5 className="text-sm font-semibold text-gray-700 mb-3 pb-2 border-b border-gray-200">
+                            Helpful Features Mentioned
+                          </h5>
+                          <div className="space-y-3">
+                            {filteredData.posttestData.filter(p => 
+                              p.app_helpful_features && 
+                              p.app_helpful_features.trim() !== '' &&
+                              p.app_helpful_features.toLowerCase() !== 'nil' &&
+                              p.app_helpful_features.toLowerCase() !== 'nothing'
+                            ).length > 0 ? (
+                              filteredData.posttestData
+                                .filter(p => 
+                                  p.app_helpful_features && 
+                                  p.app_helpful_features.trim() !== '' &&
+                                  p.app_helpful_features.toLowerCase() !== 'nil' &&
+                                  p.app_helpful_features.toLowerCase() !== 'nothing'
+                                )
+                                .map((p, idx) => (
+                                  <div key={idx} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                    <div className="flex items-start justify-between mb-2">
+                                      <span className="text-xs font-semibold text-blue-900">
+                                        {p.group_assignment || 'Unknown'} Group
+                                      </span>
+                                      <span className="text-xs text-gray-500">
+                                        {p.submitted_at ? new Date(p.submitted_at).toLocaleDateString() : 'N/A'}
+                                      </span>
+                                    </div>
+                                    <p className="text-sm text-gray-700 leading-relaxed">
+                                      {p.app_helpful_features}
+                                    </p>
+                                  </div>
+                                ))
+                            ) : (
+                              <p className="text-sm text-gray-500 italic">No helpful features mentioned</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Technical Issues */}
+                        <div>
+                          <h5 className="text-sm font-semibold text-gray-700 mb-3 pb-2 border-b border-gray-200">
+                            Technical Issues Reported
+                          </h5>
+                          <div className="space-y-3">
+                            {filteredData.posttestData.filter(p => 
+                              p.app_technical_issues && 
+                              p.app_technical_issues.trim() !== '' &&
+                              p.app_technical_issues.toLowerCase() !== 'nil' &&
+                              p.app_technical_issues.toLowerCase() !== 'nothing'
+                            ).length > 0 ? (
+                              filteredData.posttestData
+                                .filter(p => 
+                                  p.app_technical_issues && 
+                                  p.app_technical_issues.trim() !== '' &&
+                                  p.app_technical_issues.toLowerCase() !== 'nil' &&
+                                  p.app_technical_issues.toLowerCase() !== 'nothing'
+                                )
+                                .map((p, idx) => (
+                                  <div key={idx} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                    <div className="flex items-start justify-between mb-2">
+                                      <span className="text-xs font-semibold text-blue-900">
+                                        {p.group_assignment || 'Unknown'} Group
+                                      </span>
+                                      <span className="text-xs text-gray-500">
+                                        {p.submitted_at ? new Date(p.submitted_at).toLocaleDateString() : 'N/A'}
+                                      </span>
+                                    </div>
+                                    <p className="text-sm text-gray-700 leading-relaxed">
+                                      {p.app_technical_issues}
+                                    </p>
+                                  </div>
+                                ))
+                            ) : (
+                              <p className="text-sm text-gray-500 italic">No technical issues reported</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* App Suggestions */}
+                        <div>
+                          <h5 className="text-sm font-semibold text-gray-700 mb-3 pb-2 border-b border-gray-200">
+                            App Improvement Suggestions
+                          </h5>
+                          <div className="space-y-3">
+                            {filteredData.posttestData.filter(p => 
+                              p.app_suggestions && 
+                              p.app_suggestions.trim() !== '' &&
+                              p.app_suggestions.toLowerCase() !== 'nil' &&
+                              p.app_suggestions.toLowerCase() !== 'nothing'
+                            ).length > 0 ? (
+                              filteredData.posttestData
+                                .filter(p => 
+                                  p.app_suggestions && 
+                                  p.app_suggestions.trim() !== '' &&
+                                  p.app_suggestions.toLowerCase() !== 'nil' &&
+                                  p.app_suggestions.toLowerCase() !== 'nothing'
+                                )
+                                .map((p, idx) => (
+                                  <div key={idx} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                    <div className="flex items-start justify-between mb-2">
+                                      <span className="text-xs font-semibold text-blue-900">
+                                        {p.group_assignment || 'Unknown'} Group
+                                      </span>
+                                      <span className="text-xs text-gray-500">
+                                        {p.submitted_at ? new Date(p.submitted_at).toLocaleDateString() : 'N/A'}
+                                      </span>
+                                    </div>
+                                    <p className="text-sm text-gray-700 leading-relaxed">
+                                      {p.app_suggestions}
+                                    </p>
+                                  </div>
+                                ))
+                            ) : (
+                              <p className="text-sm text-gray-500 italic">No suggestions provided</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </>
                 )}
               </div>
