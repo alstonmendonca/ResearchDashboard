@@ -9,7 +9,10 @@ import {
   X,
   Settings,
   Search,
-  Target
+  Target,
+  Download,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import DataTable from './DataTable';
@@ -22,6 +25,15 @@ const Dashboard = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [groupFilter, setGroupFilter] = useState('all'); // 'all', 'Intervention', 'Control'
+  
+  // Pagination states for comments
+  const [commentsPage, setCommentsPage] = useState({
+    additional: 1,
+    helpful: 1,
+    technical: 1,
+    suggestions: 1
+  });
+  const commentsPerPage = 5;
 
   // Fetch data from Supabase
   const appUsage = useAppUsageSessions();
@@ -115,18 +127,88 @@ const Dashboard = ({ onLogout }) => {
       XLSX.utils.book_append_sheet(workbook, demographicsSheet, 'Demographics');
     }
     
-    // Add summary sheet
+    // Add comprehensive summary sheet
+    const interventionCount = participants.data?.filter(p => p.Group === 'Intervention').length || 0;
+    const controlCount = participants.data?.filter(p => p.Group === 'Control').length || 0;
+    
+    // Calculate WHO-5 scores
+    const pretestWHO5 = pretestData.data?.length > 0 ? 
+      ((pretestData.data.reduce((sum, p) => 
+        sum + (p.who5_cheerful + p.who5_calm + p.who5_active + p.who5_rested + p.who5_interested), 0
+      ) / pretestData.data.length / 5) * 25).toFixed(1) : 'N/A';
+    
+    const posttestWHO5 = posttestData.data?.length > 0 ? 
+      ((posttestData.data.reduce((sum, p) => 
+        sum + (p.who5_cheerful + p.who5_calm + p.who5_active + p.who5_rested + p.who5_interested), 0
+      ) / posttestData.data.length / 5) * 25).toFixed(1) : 'N/A';
+    
+    // Calculate PSS-4 scores
+    const pretestPSS4 = pretestData.data?.length > 0 ? 
+      (pretestData.data.reduce((sum, p) => 
+        sum + (p.pss4_unable_control + (5-p.pss4_confident_handle) + (5-p.pss4_going_your_way) + p.pss4_difficulties_piling), 0
+      ) / pretestData.data.length).toFixed(1) : 'N/A';
+    
+    const posttestPSS4 = posttestData.data?.length > 0 ? 
+      (posttestData.data.reduce((sum, p) => 
+        sum + (p.pss4_unable_control + (5-p.pss4_confident_handle) + (5-p.pss4_going_your_way) + p.pss4_difficulties_piling), 0
+      ) / posttestData.data.length).toFixed(1) : 'N/A';
+    
     const summaryData = [
-      { Metric: 'Total App Sessions', Value: appUsage.data?.length || 0 },
-      { Metric: 'Total Pretest Responses', Value: pretestData.data?.length || 0 },
-      { Metric: 'Total Demographics', Value: demographicsData.data?.length || 0 },
-      { Metric: 'Average Session Duration (minutes)', Value: appUsage.data?.length > 0 ? 
+      { Category: 'EXPORT INFORMATION', Metric: '', Value: '' },
+      { Category: '', Metric: 'Export Date', Value: new Date().toLocaleString() },
+      { Category: '', Metric: 'Export Filter', Value: groupFilter === 'all' ? 'All Participants' : `${groupFilter} Group Only` },
+      { Category: '', Metric: '', Value: '' },
+      
+      { Category: 'PARTICIPANT OVERVIEW', Metric: '', Value: '' },
+      { Category: '', Metric: 'Active Participants', Value: participants.data?.length || 0 },
+      { Category: '', Metric: 'Intervention Group', Value: interventionCount },
+      { Category: '', Metric: 'Control Group', Value: controlCount },
+      { Category: '', Metric: 'Demographics Completed', Value: participants.data?.filter(p => p.demographic_survey_completed).length || 0 },
+      { Category: '', Metric: '', Value: '' },
+      
+      { Category: 'APP USAGE STATISTICS', Metric: '', Value: '' },
+      { Category: '', Metric: 'Total App Sessions', Value: appUsage.data?.length || 0 },
+      { Category: '', Metric: 'Average Session Duration (min)', Value: appUsage.data?.length > 0 ? 
           Math.round(appUsage.data.reduce((sum, session) => sum + (session.duration_minutes || 0), 0) / appUsage.data.length) : 0 },
-      { Metric: 'Registered Nurses', Value: pretestData.data?.filter(p => p.is_registered_nurse).length || 0 },
-      { Metric: 'Export Date', Value: new Date().toLocaleString() }
+      { Category: '', Metric: 'Total Session Time (hours)', Value: appUsage.data?.length > 0 ? 
+          (appUsage.data.reduce((sum, session) => sum + (session.duration_minutes || 0), 0) / 60).toFixed(1) : 0 },
+      { Category: '', Metric: '', Value: '' },
+      
+      { Category: 'PRETEST ASSESSMENT', Metric: '', Value: '' },
+      { Category: '', Metric: 'Total Pretest Responses', Value: pretestData.data?.length || 0 },
+      { Category: '', Metric: 'Registered Nurses', Value: pretestData.data?.filter(p => p.is_registered_nurse).length || 0 },
+      { Category: '', Metric: 'Consented Participants', Value: pretestData.data?.filter(p => p.provides_consent).length || 0 },
+      { Category: '', Metric: 'WHO-5 Average Score (%)', Value: pretestWHO5 },
+      { Category: '', Metric: 'PSS-4 Average Score', Value: pretestPSS4 },
+      { Category: '', Metric: '', Value: '' },
+      
+      { Category: 'POSTTEST ASSESSMENT', Metric: '', Value: '' },
+      { Category: '', Metric: 'Total Posttest Responses', Value: posttestData.data?.length || 0 },
+      { Category: '', Metric: 'Posttest Completion Rate (%)', Value: participants.data?.length > 0 ? 
+          Math.round((posttestData.data?.length / participants.data.length) * 100) : 0 },
+      { Category: '', Metric: 'WHO-5 Average Score (%)', Value: posttestWHO5 },
+      { Category: '', Metric: 'PSS-4 Average Score', Value: posttestPSS4 },
+      { Category: '', Metric: 'Responses with Feedback', Value: posttestData.data?.filter(p => 
+          p.additional_comments && p.additional_comments.trim() !== '' && 
+          p.additional_comments.toLowerCase() !== 'nil' && p.additional_comments.toLowerCase() !== 'nothing'
+        ).length || 0 },
+      { Category: '', Metric: '', Value: '' },
+      
+      { Category: 'DEMOGRAPHICS SUMMARY', Metric: '', Value: '' },
+      { Category: '', Metric: 'Total Demographics Surveys', Value: demographicsData.data?.length || 0 },
+      { Category: '', Metric: 'Completion Rate (%)', Value: participants.data?.length > 0 ? 
+          Math.round((demographicsData.data?.length / participants.data.length) * 100) : 0 }
     ];
     
     const summarySheet = XLSX.utils.json_to_sheet(summaryData);
+    
+    // Set column widths for better readability
+    summarySheet['!cols'] = [
+      { wch: 25 },  // Category
+      { wch: 35 },  // Metric
+      { wch: 20 }   // Value
+    ];
+    
     XLSX.utils.book_append_sheet(workbook, summarySheet, 'Summary');
     
     // Generate filename with current date
@@ -1154,10 +1236,49 @@ const Dashboard = ({ onLogout }) => {
 
                     {/* Detailed Feedback & Comments Section */}
                     <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                      <h4 className="text-md font-bold text-gray-900 mb-4 flex items-center">
-                        <FileText className="w-5 h-5 text-blue-900 mr-2" />
-                        Participant Feedback & Comments
-                      </h4>
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-md font-bold text-gray-900 flex items-center">
+                          <FileText className="w-5 h-5 text-blue-900 mr-2" />
+                          Participant Feedback & Comments
+                        </h4>
+                        <button
+                          onClick={() => {
+                            // Prepare comments data for export
+                            const commentsData = filteredData.posttestData.map(p => ({
+                              'Group': p.group_assignment || 'Unknown',
+                              'Submitted Date': p.submitted_at ? new Date(p.submitted_at).toLocaleDateString() : 'N/A',
+                              'Additional Comments': p.additional_comments || '',
+                              'Helpful Features': p.app_helpful_features || '',
+                              'Technical Issues': p.app_technical_issues || '',
+                              'Suggestions': p.app_suggestions || ''
+                            }));
+
+                            // Create workbook and worksheet
+                            const workbook = XLSX.utils.book_new();
+                            const worksheet = XLSX.utils.json_to_sheet(commentsData);
+                            
+                            // Set column widths
+                            worksheet['!cols'] = [
+                              { wch: 15 },  // Group
+                              { wch: 15 },  // Submitted Date
+                              { wch: 50 },  // Additional Comments
+                              { wch: 50 },  // Helpful Features
+                              { wch: 50 },  // Technical Issues
+                              { wch: 50 }   // Suggestions
+                            ];
+                            
+                            XLSX.utils.book_append_sheet(workbook, worksheet, 'Posttest Comments');
+                            
+                            // Generate filename with current date
+                            const filename = `Posttest_Comments_${new Date().toISOString().split('T')[0]}.xlsx`;
+                            XLSX.writeFile(workbook, filename);
+                          }}
+                          className="flex items-center px-4 py-2 bg-blue-900 text-white rounded-lg hover:bg-blue-800 transition-colors text-sm font-medium"
+                        >
+                          <Download className="w-4 h-4 mr-2" />
+                          Export Comments
+                        </button>
+                      </div>
                       
                       <div className="space-y-6">
                         {/* Additional Comments */}
@@ -1166,37 +1287,65 @@ const Dashboard = ({ onLogout }) => {
                             Additional Comments
                           </h5>
                           <div className="space-y-3">
-                            {filteredData.posttestData.filter(p => 
-                              p.additional_comments && 
-                              p.additional_comments.trim() !== '' && 
-                              p.additional_comments.toLowerCase() !== 'nil' &&
-                              p.additional_comments.toLowerCase() !== 'nothing'
-                            ).length > 0 ? (
-                              filteredData.posttestData
-                                .filter(p => 
-                                  p.additional_comments && 
-                                  p.additional_comments.trim() !== '' && 
-                                  p.additional_comments.toLowerCase() !== 'nil' &&
-                                  p.additional_comments.toLowerCase() !== 'nothing'
-                                )
-                                .map((p, idx) => (
-                                  <div key={idx} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                                    <div className="flex items-start justify-between mb-2">
-                                      <span className="text-xs font-semibold text-blue-900">
-                                        {p.group_assignment || 'Unknown'} Group
-                                      </span>
-                                      <span className="text-xs text-gray-500">
-                                        {p.submitted_at ? new Date(p.submitted_at).toLocaleDateString() : 'N/A'}
-                                      </span>
+                            {(() => {
+                              const filtered = filteredData.posttestData.filter(p => 
+                                p.additional_comments && 
+                                p.additional_comments.trim() !== '' && 
+                                p.additional_comments.toLowerCase() !== 'nil' &&
+                                p.additional_comments.toLowerCase() !== 'nothing'
+                              );
+                              const totalPages = Math.ceil(filtered.length / commentsPerPage);
+                              const startIdx = (commentsPage.additional - 1) * commentsPerPage;
+                              const paginatedData = filtered.slice(startIdx, startIdx + commentsPerPage);
+                              
+                              return filtered.length > 0 ? (
+                                <>
+                                  {paginatedData.map((p, idx) => (
+                                    <div key={idx} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                      <div className="flex items-start justify-between mb-2">
+                                        <span className="text-xs font-semibold text-blue-900">
+                                          {p.group_assignment || 'Unknown'} Group
+                                        </span>
+                                        <span className="text-xs text-gray-500">
+                                          {p.submitted_at ? new Date(p.submitted_at).toLocaleDateString() : 'N/A'}
+                                        </span>
+                                      </div>
+                                      <p className="text-sm text-gray-700 leading-relaxed">
+                                        {p.additional_comments}
+                                      </p>
                                     </div>
-                                    <p className="text-sm text-gray-700 leading-relaxed">
-                                      {p.additional_comments}
-                                    </p>
-                                  </div>
-                                ))
-                            ) : (
-                              <p className="text-sm text-gray-500 italic">No additional comments provided</p>
-                            )}
+                                  ))}
+                                  {totalPages > 1 && (
+                                    <div className="flex items-center justify-between pt-3 border-t border-gray-200">
+                                      <p className="text-sm text-gray-600">
+                                        Showing {startIdx + 1}-{Math.min(startIdx + commentsPerPage, filtered.length)} of {filtered.length}
+                                      </p>
+                                      <div className="flex items-center space-x-2">
+                                        <button
+                                          onClick={() => setCommentsPage(prev => ({ ...prev, additional: prev.additional - 1 }))}
+                                          disabled={commentsPage.additional === 1}
+                                          className="p-1 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                          <ChevronLeft className="w-5 h-5 text-gray-600" />
+                                        </button>
+                                        <span className="text-sm text-gray-600">
+                                          Page {commentsPage.additional} of {totalPages}
+                                        </span>
+                                        <button
+                                          onClick={() => setCommentsPage(prev => ({ ...prev, additional: prev.additional + 1 }))}
+                                          disabled={commentsPage.additional === totalPages}
+                                          className="p-1 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                          <ChevronRight className="w-5 h-5 text-gray-600" />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
+                                </>
+                              ) : (
+                                <p className="text-sm text-gray-500 italic">No additional comments provided</p>
+                              );
+                            })()}
                           </div>
                         </div>
 
@@ -1206,37 +1355,65 @@ const Dashboard = ({ onLogout }) => {
                             Helpful Features Mentioned
                           </h5>
                           <div className="space-y-3">
-                            {filteredData.posttestData.filter(p => 
-                              p.app_helpful_features && 
-                              p.app_helpful_features.trim() !== '' &&
-                              p.app_helpful_features.toLowerCase() !== 'nil' &&
-                              p.app_helpful_features.toLowerCase() !== 'nothing'
-                            ).length > 0 ? (
-                              filteredData.posttestData
-                                .filter(p => 
-                                  p.app_helpful_features && 
-                                  p.app_helpful_features.trim() !== '' &&
-                                  p.app_helpful_features.toLowerCase() !== 'nil' &&
-                                  p.app_helpful_features.toLowerCase() !== 'nothing'
-                                )
-                                .map((p, idx) => (
-                                  <div key={idx} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                                    <div className="flex items-start justify-between mb-2">
-                                      <span className="text-xs font-semibold text-blue-900">
-                                        {p.group_assignment || 'Unknown'} Group
-                                      </span>
-                                      <span className="text-xs text-gray-500">
-                                        {p.submitted_at ? new Date(p.submitted_at).toLocaleDateString() : 'N/A'}
-                                      </span>
+                            {(() => {
+                              const filtered = filteredData.posttestData.filter(p => 
+                                p.app_helpful_features && 
+                                p.app_helpful_features.trim() !== '' &&
+                                p.app_helpful_features.toLowerCase() !== 'nil' &&
+                                p.app_helpful_features.toLowerCase() !== 'nothing'
+                              );
+                              const totalPages = Math.ceil(filtered.length / commentsPerPage);
+                              const startIdx = (commentsPage.helpful - 1) * commentsPerPage;
+                              const paginatedData = filtered.slice(startIdx, startIdx + commentsPerPage);
+                              
+                              return filtered.length > 0 ? (
+                                <>
+                                  {paginatedData.map((p, idx) => (
+                                    <div key={idx} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                      <div className="flex items-start justify-between mb-2">
+                                        <span className="text-xs font-semibold text-blue-900">
+                                          {p.group_assignment || 'Unknown'} Group
+                                        </span>
+                                        <span className="text-xs text-gray-500">
+                                          {p.submitted_at ? new Date(p.submitted_at).toLocaleDateString() : 'N/A'}
+                                        </span>
+                                      </div>
+                                      <p className="text-sm text-gray-700 leading-relaxed">
+                                        {p.app_helpful_features}
+                                      </p>
                                     </div>
-                                    <p className="text-sm text-gray-700 leading-relaxed">
-                                      {p.app_helpful_features}
-                                    </p>
-                                  </div>
-                                ))
-                            ) : (
-                              <p className="text-sm text-gray-500 italic">No helpful features mentioned</p>
-                            )}
+                                  ))}
+                                  {totalPages > 1 && (
+                                    <div className="flex items-center justify-between pt-3 border-t border-gray-200">
+                                      <p className="text-sm text-gray-600">
+                                        Showing {startIdx + 1}-{Math.min(startIdx + commentsPerPage, filtered.length)} of {filtered.length}
+                                      </p>
+                                      <div className="flex items-center space-x-2">
+                                        <button
+                                          onClick={() => setCommentsPage(prev => ({ ...prev, helpful: prev.helpful - 1 }))}
+                                          disabled={commentsPage.helpful === 1}
+                                          className="p-1 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                          <ChevronLeft className="w-5 h-5 text-gray-600" />
+                                        </button>
+                                        <span className="text-sm text-gray-600">
+                                          Page {commentsPage.helpful} of {totalPages}
+                                        </span>
+                                        <button
+                                          onClick={() => setCommentsPage(prev => ({ ...prev, helpful: prev.helpful + 1 }))}
+                                          disabled={commentsPage.helpful === totalPages}
+                                          className="p-1 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                          <ChevronRight className="w-5 h-5 text-gray-600" />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
+                                </>
+                              ) : (
+                                <p className="text-sm text-gray-500 italic">No helpful features mentioned</p>
+                              );
+                            })()}
                           </div>
                         </div>
 
@@ -1246,37 +1423,65 @@ const Dashboard = ({ onLogout }) => {
                             Technical Issues Reported
                           </h5>
                           <div className="space-y-3">
-                            {filteredData.posttestData.filter(p => 
-                              p.app_technical_issues && 
-                              p.app_technical_issues.trim() !== '' &&
-                              p.app_technical_issues.toLowerCase() !== 'nil' &&
-                              p.app_technical_issues.toLowerCase() !== 'nothing'
-                            ).length > 0 ? (
-                              filteredData.posttestData
-                                .filter(p => 
-                                  p.app_technical_issues && 
-                                  p.app_technical_issues.trim() !== '' &&
-                                  p.app_technical_issues.toLowerCase() !== 'nil' &&
-                                  p.app_technical_issues.toLowerCase() !== 'nothing'
-                                )
-                                .map((p, idx) => (
-                                  <div key={idx} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                                    <div className="flex items-start justify-between mb-2">
-                                      <span className="text-xs font-semibold text-blue-900">
-                                        {p.group_assignment || 'Unknown'} Group
-                                      </span>
-                                      <span className="text-xs text-gray-500">
-                                        {p.submitted_at ? new Date(p.submitted_at).toLocaleDateString() : 'N/A'}
-                                      </span>
+                            {(() => {
+                              const filtered = filteredData.posttestData.filter(p => 
+                                p.app_technical_issues && 
+                                p.app_technical_issues.trim() !== '' &&
+                                p.app_technical_issues.toLowerCase() !== 'nil' &&
+                                p.app_technical_issues.toLowerCase() !== 'nothing'
+                              );
+                              const totalPages = Math.ceil(filtered.length / commentsPerPage);
+                              const startIdx = (commentsPage.technical - 1) * commentsPerPage;
+                              const paginatedData = filtered.slice(startIdx, startIdx + commentsPerPage);
+                              
+                              return filtered.length > 0 ? (
+                                <>
+                                  {paginatedData.map((p, idx) => (
+                                    <div key={idx} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                      <div className="flex items-start justify-between mb-2">
+                                        <span className="text-xs font-semibold text-blue-900">
+                                          {p.group_assignment || 'Unknown'} Group
+                                        </span>
+                                        <span className="text-xs text-gray-500">
+                                          {p.submitted_at ? new Date(p.submitted_at).toLocaleDateString() : 'N/A'}
+                                        </span>
+                                      </div>
+                                      <p className="text-sm text-gray-700 leading-relaxed">
+                                        {p.app_technical_issues}
+                                      </p>
                                     </div>
-                                    <p className="text-sm text-gray-700 leading-relaxed">
-                                      {p.app_technical_issues}
-                                    </p>
-                                  </div>
-                                ))
-                            ) : (
-                              <p className="text-sm text-gray-500 italic">No technical issues reported</p>
-                            )}
+                                  ))}
+                                  {totalPages > 1 && (
+                                    <div className="flex items-center justify-between pt-3 border-t border-gray-200">
+                                      <p className="text-sm text-gray-600">
+                                        Showing {startIdx + 1}-{Math.min(startIdx + commentsPerPage, filtered.length)} of {filtered.length}
+                                      </p>
+                                      <div className="flex items-center space-x-2">
+                                        <button
+                                          onClick={() => setCommentsPage(prev => ({ ...prev, technical: prev.technical - 1 }))}
+                                          disabled={commentsPage.technical === 1}
+                                          className="p-1 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                          <ChevronLeft className="w-5 h-5 text-gray-600" />
+                                        </button>
+                                        <span className="text-sm text-gray-600">
+                                          Page {commentsPage.technical} of {totalPages}
+                                        </span>
+                                        <button
+                                          onClick={() => setCommentsPage(prev => ({ ...prev, technical: prev.technical + 1 }))}
+                                          disabled={commentsPage.technical === totalPages}
+                                          className="p-1 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                          <ChevronRight className="w-5 h-5 text-gray-600" />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
+                                </>
+                              ) : (
+                                <p className="text-sm text-gray-500 italic">No technical issues reported</p>
+                              );
+                            })()}
                           </div>
                         </div>
 
@@ -1286,37 +1491,65 @@ const Dashboard = ({ onLogout }) => {
                             App Improvement Suggestions
                           </h5>
                           <div className="space-y-3">
-                            {filteredData.posttestData.filter(p => 
-                              p.app_suggestions && 
-                              p.app_suggestions.trim() !== '' &&
-                              p.app_suggestions.toLowerCase() !== 'nil' &&
-                              p.app_suggestions.toLowerCase() !== 'nothing'
-                            ).length > 0 ? (
-                              filteredData.posttestData
-                                .filter(p => 
-                                  p.app_suggestions && 
-                                  p.app_suggestions.trim() !== '' &&
-                                  p.app_suggestions.toLowerCase() !== 'nil' &&
-                                  p.app_suggestions.toLowerCase() !== 'nothing'
-                                )
-                                .map((p, idx) => (
-                                  <div key={idx} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                                    <div className="flex items-start justify-between mb-2">
-                                      <span className="text-xs font-semibold text-blue-900">
-                                        {p.group_assignment || 'Unknown'} Group
-                                      </span>
-                                      <span className="text-xs text-gray-500">
-                                        {p.submitted_at ? new Date(p.submitted_at).toLocaleDateString() : 'N/A'}
-                                      </span>
+                            {(() => {
+                              const filtered = filteredData.posttestData.filter(p => 
+                                p.app_suggestions && 
+                                p.app_suggestions.trim() !== '' &&
+                                p.app_suggestions.toLowerCase() !== 'nil' &&
+                                p.app_suggestions.toLowerCase() !== 'nothing'
+                              );
+                              const totalPages = Math.ceil(filtered.length / commentsPerPage);
+                              const startIdx = (commentsPage.suggestions - 1) * commentsPerPage;
+                              const paginatedData = filtered.slice(startIdx, startIdx + commentsPerPage);
+                              
+                              return filtered.length > 0 ? (
+                                <>
+                                  {paginatedData.map((p, idx) => (
+                                    <div key={idx} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                      <div className="flex items-start justify-between mb-2">
+                                        <span className="text-xs font-semibold text-blue-900">
+                                          {p.group_assignment || 'Unknown'} Group
+                                        </span>
+                                        <span className="text-xs text-gray-500">
+                                          {p.submitted_at ? new Date(p.submitted_at).toLocaleDateString() : 'N/A'}
+                                        </span>
+                                      </div>
+                                      <p className="text-sm text-gray-700 leading-relaxed">
+                                        {p.app_suggestions}
+                                      </p>
                                     </div>
-                                    <p className="text-sm text-gray-700 leading-relaxed">
-                                      {p.app_suggestions}
-                                    </p>
-                                  </div>
-                                ))
-                            ) : (
-                              <p className="text-sm text-gray-500 italic">No suggestions provided</p>
-                            )}
+                                  ))}
+                                  {totalPages > 1 && (
+                                    <div className="flex items-center justify-between pt-3 border-t border-gray-200">
+                                      <p className="text-sm text-gray-600">
+                                        Showing {startIdx + 1}-{Math.min(startIdx + commentsPerPage, filtered.length)} of {filtered.length}
+                                      </p>
+                                      <div className="flex items-center space-x-2">
+                                        <button
+                                          onClick={() => setCommentsPage(prev => ({ ...prev, suggestions: prev.suggestions - 1 }))}
+                                          disabled={commentsPage.suggestions === 1}
+                                          className="p-1 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                          <ChevronLeft className="w-5 h-5 text-gray-600" />
+                                        </button>
+                                        <span className="text-sm text-gray-600">
+                                          Page {commentsPage.suggestions} of {totalPages}
+                                        </span>
+                                        <button
+                                          onClick={() => setCommentsPage(prev => ({ ...prev, suggestions: prev.suggestions + 1 }))}
+                                          disabled={commentsPage.suggestions === totalPages}
+                                          className="p-1 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                          <ChevronRight className="w-5 h-5 text-gray-600" />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
+                                </>
+                              ) : (
+                                <p className="text-sm text-gray-500 italic">No suggestions provided</p>
+                              );
+                            })()}
                           </div>
                         </div>
                       </div>

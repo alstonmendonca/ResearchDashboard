@@ -474,13 +474,15 @@ const AnalyticsDashboard = ({ appUsageData, pretestData, demographicsData }) => 
     XLSX.utils.book_append_sheet(workbook, sessionStatsSheet, 'Session Statistics');
     
     // Daily trends
-    const dailyTrendsSheet = XLSX.utils.json_to_sheet(
-      analytics.dailySessions.map(d => ({
-        Date: d.date.toDateString(),
-        Sessions: d.count
-      }))
-    );
-    XLSX.utils.book_append_sheet(workbook, dailyTrendsSheet, 'Daily Trends');
+    if (analytics.dailySessions && analytics.dailySessions.length > 0) {
+      const dailyTrendsSheet = XLSX.utils.json_to_sheet(
+        analytics.dailySessions.map(d => ({
+          Date: d.date.toDateString(),
+          Sessions: d.count
+        }))
+      );
+      XLSX.utils.book_append_sheet(workbook, dailyTrendsSheet, 'Daily Trends');
+    }
     
     const filename = `research_analytics_${new Date().toISOString().split('T')[0]}.xlsx`;
     XLSX.writeFile(workbook, filename);
