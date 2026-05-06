@@ -135,22 +135,22 @@ const Dashboard = ({ onLogout }) => {
     const pretestWHO5 = pretestData.data?.length > 0 ? 
       ((pretestData.data.reduce((sum, p) => 
         sum + (p.who5_cheerful + p.who5_calm + p.who5_active + p.who5_rested + p.who5_interested), 0
-      ) / pretestData.data.length / 5) * 25).toFixed(1) : 'N/A';
+      ) / pretestData.data.length / 25) * 100).toFixed(1) : 'N/A';
     
     const posttestWHO5 = posttestData.data?.length > 0 ? 
       ((posttestData.data.reduce((sum, p) => 
         sum + (p.who5_cheerful + p.who5_calm + p.who5_active + p.who5_rested + p.who5_interested), 0
-      ) / posttestData.data.length / 5) * 25).toFixed(1) : 'N/A';
+      ) / posttestData.data.length / 25) * 100).toFixed(1) : 'N/A';
     
     // Calculate PSS-4 scores
     const pretestPSS4 = pretestData.data?.length > 0 ? 
       (pretestData.data.reduce((sum, p) => 
-        sum + (p.pss4_unable_control + (5-p.pss4_confident_handle) + (5-p.pss4_going_your_way) + p.pss4_difficulties_piling), 0
+        sum + (p.pss4_unable_control + (4-p.pss4_confident_handle) + (4-p.pss4_going_your_way) + p.pss4_difficulties_piling), 0
       ) / pretestData.data.length).toFixed(1) : 'N/A';
     
     const posttestPSS4 = posttestData.data?.length > 0 ? 
       (posttestData.data.reduce((sum, p) => 
-        sum + (p.pss4_unable_control + (5-p.pss4_confident_handle) + (5-p.pss4_going_your_way) + p.pss4_difficulties_piling), 0
+        sum + (p.pss4_unable_control + (4-p.pss4_confident_handle) + (4-p.pss4_going_your_way) + p.pss4_difficulties_piling), 0
       ) / posttestData.data.length).toFixed(1) : 'N/A';
     
     const summaryData = [
@@ -163,7 +163,7 @@ const Dashboard = ({ onLogout }) => {
       { Category: '', Metric: 'Active Participants', Value: participants.data?.length || 0 },
       { Category: '', Metric: 'Intervention Group', Value: interventionCount },
       { Category: '', Metric: 'Control Group', Value: controlCount },
-      { Category: '', Metric: 'Demographics Completed', Value: participants.data?.filter(p => p.demographic_survey_completed).length || 0 },
+      { Category: '', Metric: 'Demographics Completed', Value: demographicsData.data?.length || 0 },
       { Category: '', Metric: '', Value: '' },
       
       { Category: 'APP USAGE STATISTICS', Metric: '', Value: '' },
@@ -233,12 +233,13 @@ const Dashboard = ({ onLogout }) => {
     { key: 'id', label: 'ID' },
     { key: 'participant_number', label: 'Participant' },
     { key: 'is_registered_nurse', label: 'Registered Nurse', render: (val) => val ? 'Yes' : 'No' },
-    { key: 'provides_comfort', label: 'Provides Comfort', render: (val) => val ? 'Yes' : 'No' },
+    { key: 'provides_consent', label: 'Provides Consent', render: (val) => val ? 'Yes' : 'No' },
     { key: 'understands_voluntary', label: 'Understands Voluntary', render: (val) => val ? 'Yes' : 'No' },
-    { key: 'which_cheerful', label: 'Cheerful Rating' },
-    { key: 'which_calm', label: 'Calm Rating' },
-    { key: 'which_active', label: 'Active Rating' },
-    { key: 'which_interested', label: 'Interested Rating' },
+    { key: 'who5_cheerful', label: 'Cheerful Rating' },
+    { key: 'who5_calm', label: 'Calm Rating' },
+    { key: 'who5_active', label: 'Active Rating' },
+    { key: 'who5_rested', label: 'Rested Rating' },
+    { key: 'who5_interested', label: 'Interested Rating' },
     { key: 'created_at', label: 'Created', render: formatDate }
   ];
 
@@ -499,7 +500,7 @@ const Dashboard = ({ onLogout }) => {
                           {pretestData.loading || filteredData.pretestData.length === 0 ? '...' : 
                             ((filteredData.pretestData.reduce((sum, p) => 
                               sum + (p.who5_cheerful + p.who5_calm + p.who5_active + p.who5_rested + p.who5_interested), 0
-                            ) / filteredData.pretestData.length / 5) * 25).toFixed(1)
+                            ) / filteredData.pretestData.length / 25) * 100).toFixed(1)
                           }%
                         </span>
                       </div>
@@ -524,7 +525,7 @@ const Dashboard = ({ onLogout }) => {
                         <span className="text-lg font-bold text-blue-900">
                           {pretestData.loading || filteredData.pretestData.length === 0 ? '...' : 
                             (filteredData.pretestData.reduce((sum, p) => 
-                              sum + (p.pss4_unable_control + (5-p.pss4_confident_handle) + (5-p.pss4_going_your_way) + p.pss4_difficulties_piling), 0
+                              sum + (p.pss4_unable_control + (4-p.pss4_confident_handle) + (4-p.pss4_going_your_way) + p.pss4_difficulties_piling), 0
                             ) / filteredData.pretestData.length).toFixed(1)
                           }
                         </span>
@@ -627,7 +628,7 @@ const Dashboard = ({ onLogout }) => {
                         {posttestData.loading || filteredData.posttestData.length === 0 ? '...' : 
                           ((filteredData.posttestData.reduce((sum, p) => 
                             sum + (p.who5_cheerful + p.who5_calm + p.who5_active + p.who5_rested + p.who5_interested), 0
-                          ) / filteredData.posttestData.length / 5) * 25).toFixed(1)
+                          ) / filteredData.posttestData.length / 25) * 100).toFixed(1)
                         }%
                       </p>
                       <p className="text-xs text-gray-500 mt-1">Well-being index</p>
@@ -639,7 +640,7 @@ const Dashboard = ({ onLogout }) => {
                       <p className="text-3xl font-bold text-blue-900">
                         {posttestData.loading || filteredData.posttestData.length === 0 ? '...' : 
                           (filteredData.posttestData.reduce((sum, p) => 
-                            sum + (p.pss4_unable_control + (5-p.pss4_confident_handle) + (5-p.pss4_going_your_way) + p.pss4_difficulties_piling), 0
+                            sum + (p.pss4_unable_control + (4-p.pss4_confident_handle) + (4-p.pss4_going_your_way) + p.pss4_difficulties_piling), 0
                           ) / filteredData.posttestData.length).toFixed(1)
                         }
                       </p>
@@ -976,14 +977,14 @@ const Dashboard = ({ onLogout }) => {
                               <span className="text-lg font-bold text-blue-900">
                                 {((filteredData.posttestData.reduce((sum, p) => 
                                   sum + (p.who5_cheerful + p.who5_calm + p.who5_active + p.who5_rested + p.who5_interested), 0
-                                ) / filteredData.posttestData.length / 5) * 25).toFixed(1)}%
+                                ) / filteredData.posttestData.length / 25) * 100).toFixed(1)}%
                               </span>
                             </div>
                             <div className="flex justify-between items-center">
                               <span className="text-xs text-gray-600">Highest</span>
                               <span className="text-sm font-bold text-gray-700">
                                 {Math.max(...filteredData.posttestData.map(p => 
-                                  ((p.who5_cheerful + p.who5_calm + p.who5_active + p.who5_rested + p.who5_interested) / 5) * 25
+                                  ((p.who5_cheerful + p.who5_calm + p.who5_active + p.who5_rested + p.who5_interested) / 25) * 100
                                 )).toFixed(1)}%
                               </span>
                             </div>
@@ -991,7 +992,7 @@ const Dashboard = ({ onLogout }) => {
                               <span className="text-xs text-gray-600">Lowest</span>
                               <span className="text-sm font-bold text-gray-700">
                                 {Math.min(...filteredData.posttestData.map(p => 
-                                  ((p.who5_cheerful + p.who5_calm + p.who5_active + p.who5_rested + p.who5_interested) / 5) * 25
+                                  ((p.who5_cheerful + p.who5_calm + p.who5_active + p.who5_rested + p.who5_interested) / 25) * 100
                                 )).toFixed(1)}%
                               </span>
                             </div>
@@ -1006,7 +1007,7 @@ const Dashboard = ({ onLogout }) => {
                               <span className="text-xs text-gray-600">Average</span>
                               <span className="text-lg font-bold text-blue-900">
                                 {(filteredData.posttestData.reduce((sum, p) => 
-                                  sum + (p.pss4_unable_control + (5-p.pss4_confident_handle) + (5-p.pss4_going_your_way) + p.pss4_difficulties_piling), 0
+                                  sum + (p.pss4_unable_control + (4-p.pss4_confident_handle) + (4-p.pss4_going_your_way) + p.pss4_difficulties_piling), 0
                                 ) / filteredData.posttestData.length).toFixed(1)}
                               </span>
                             </div>
@@ -1014,7 +1015,7 @@ const Dashboard = ({ onLogout }) => {
                               <span className="text-xs text-gray-600">Highest</span>
                               <span className="text-sm font-bold text-gray-700">
                                 {Math.max(...filteredData.posttestData.map(p => 
-                                  p.pss4_unable_control + (5-p.pss4_confident_handle) + (5-p.pss4_going_your_way) + p.pss4_difficulties_piling
+                                  p.pss4_unable_control + (4-p.pss4_confident_handle) + (4-p.pss4_going_your_way) + p.pss4_difficulties_piling
                                 )).toFixed(1)}
                               </span>
                             </div>
@@ -1022,7 +1023,7 @@ const Dashboard = ({ onLogout }) => {
                               <span className="text-xs text-gray-600">Lowest</span>
                               <span className="text-sm font-bold text-gray-700">
                                 {Math.min(...filteredData.posttestData.map(p => 
-                                  p.pss4_unable_control + (5-p.pss4_confident_handle) + (5-p.pss4_going_your_way) + p.pss4_difficulties_piling
+                                  p.pss4_unable_control + (4-p.pss4_confident_handle) + (4-p.pss4_going_your_way) + p.pss4_difficulties_piling
                                 )).toFixed(1)}
                               </span>
                             </div>
