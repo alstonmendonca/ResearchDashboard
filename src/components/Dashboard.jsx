@@ -266,6 +266,7 @@ const Dashboard = ({ onLogout }) => {
     { id: 'pretest', label: 'Pretest Responses', icon: FileText, color: 'text-purple-600' },
     { id: 'posttest', label: 'Posttest Responses', icon: FileText, color: 'text-blue-600' },
     { id: 'demographics', label: 'Demographics', icon: Users, color: 'text-orange-600' },
+    { id: 'participant-details', label: 'Participant Details', icon: Users, color: 'text-teal-600' },
   ];
 
   return (
@@ -357,6 +358,7 @@ const Dashboard = ({ onLogout }) => {
                 {activeTab === 'pretest' && 'Pre-test response analysis'}
                 {activeTab === 'posttest' && 'Post-test response analysis'}
                 {activeTab === 'demographics' && 'Participant demographic information'}
+                {activeTab === 'participant-details' && 'Active participant IDs and their assigned groups'}
               </p>
             </div>
           </div>
@@ -1568,6 +1570,182 @@ const Dashboard = ({ onLogout }) => {
                 title="Demographic Surveys"
                 type="demographics"
               />
+            )}
+
+            {activeTab === 'participant-details' && (
+              <div className="space-y-6">
+                {/* Summary Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Used IDs</p>
+                        <p className="text-2xl font-bold text-gray-900">
+                          {participants.loading ? '...' : filteredData.participants.length}
+                        </p>
+                        <p className="text-xs text-gray-600 mt-1">Active in study</p>
+                      </div>
+                      <div className="p-2 bg-teal-100 rounded-lg">
+                        <Users className="w-6 h-6 text-teal-600" />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Intervention Group</p>
+                        <p className="text-2xl font-bold text-teal-700">
+                          {participants.loading ? '...' : filteredData.participants.filter(p => p.Group === 'Intervention').length}
+                        </p>
+                        <p className="text-xs text-gray-600 mt-1">Treatment arm</p>
+                      </div>
+                      <div className="p-2 bg-blue-100 rounded-lg">
+                        <Target className="w-6 h-6 text-blue-600" />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Control Group</p>
+                        <p className="text-2xl font-bold text-gray-700">
+                          {participants.loading ? '...' : filteredData.participants.filter(p => p.Group === 'Control').length}
+                        </p>
+                        <p className="text-xs text-gray-600 mt-1">Control arm</p>
+                      </div>
+                      <div className="p-2 bg-gray-200 rounded-lg">
+                        <Settings className="w-6 h-6 text-gray-600" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Participant Details Table */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+                  <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-900">Used Participant IDs</h3>
+                    <button
+                      onClick={() => {
+                        const exportData = filteredData.participants.map(p => ({
+                          'Participant Number': p.participant_number,
+                          'Group': p.Group,
+                          'ID Used': p.id_used ? 'Yes' : 'No',
+                          'Created At': p.created_at ? new Date(p.created_at).toLocaleString() : 'N/A'
+                        }));
+                        const workbook = XLSX.utils.book_new();
+                        const worksheet = XLSX.utils.json_to_sheet(exportData);
+                        worksheet['!cols'] = [
+                          { wch: 20 },
+                          { wch: 15 },
+                          { wch: 10 },
+                          { wch: 25 }
+                        ];
+                        XLSX.utils.book_append_sheet(workbook, worksheet, 'Participant Details');
+                        XLSX.writeFile(workbook, `Participant_Details_${new Date().toISOString().split('T')[0]}.xlsx`);
+                      }}
+                      className="flex items-center px-4 py-2 bg-blue-900 text-white rounded-lg hover:bg-blue-800 transition-colors text-sm font-medium"
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Export
+                    </button>
+                  </div>
+
+                  {participants.loading ? (
+                    <div className="flex items-center justify-center py-16">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-900"></div>
+                      <span className="ml-3 text-gray-500">Loading participants...</span>
+                    </div>
+                  ) : participants.error ? (
+                    <div className="flex items-center justify-center py-16 text-red-500">
+                      <p>Error loading data: {participants.error}</p>
+                    </div>
+                  ) : filteredData.participants.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-16 text-gray-500">
+                      <Users className="w-12 h-12 mb-3 text-gray-300" />
+                      <p className="text-lg font-medium">No used participants found</p>
+                      <p className="text-sm mt-1">No participant IDs have been assigned yet</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                              #
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                              Participant ID
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                              Group
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                              Status
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                              Registered At
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {filteredData.participants
+                            .sort((a, b) => String(a.participant_number || '').localeCompare(String(b.participant_number || ''), undefined, { numeric: true }))
+                            .map((participant, index) => (
+                            <tr key={participant.id || index} className="hover:bg-gray-50 transition-colors">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {index + 1}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex items-center">
+                                  <div className="w-8 h-8 bg-blue-900 rounded-full flex items-center justify-center mr-3">
+                                    <span className="text-white text-xs font-bold">
+                                      {(participant.participant_number || '?').toString().slice(-2)}
+                                    </span>
+                                  </div>
+                                  <span className="text-sm font-medium text-gray-900">
+                                    {participant.participant_number || 'N/A'}
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
+                                  participant.Group === 'Intervention'
+                                    ? 'bg-teal-100 text-teal-800'
+                                    : participant.Group === 'Control'
+                                    ? 'bg-gray-100 text-gray-800'
+                                    : 'bg-yellow-100 text-yellow-800'
+                                }`}>
+                                  {participant.Group || 'Unknown'}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                                  In Use
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {participant.created_at ? new Date(participant.created_at).toLocaleString() : 'N/A'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+
+                  {/* Table Footer */}
+                  {!participants.loading && !participants.error && filteredData.participants.length > 0 && (
+                    <div className="px-6 py-3 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+                      <p className="text-sm text-gray-600">
+                        Showing <span className="font-semibold">{filteredData.participants.length}</span> used participant{filteredData.participants.length !== 1 ? 's' : ''}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        Only IDs marked as <span className="font-medium text-gray-700">id_used = true</span> are displayed
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
             )}
           </div>
         </main>
