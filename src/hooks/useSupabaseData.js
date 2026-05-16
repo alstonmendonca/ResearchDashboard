@@ -3,6 +3,24 @@ import { supabase } from '../supabaseClient';
 
 // Auto-refresh every 30 seconds
 const AUTO_REFRESH_INTERVAL = 30000;
+const COLUMN_REGEX = /column/i;
+const CREATED_AT_REGEX = /created_at/i;
+
+const isCreatedAtColumnError = (error) =>
+  Boolean(
+    error &&
+      (
+        error.code === '42703' ||
+        (
+          COLUMN_REGEX.test(error.message || '') &&
+          CREATED_AT_REGEX.test(error.message || '')
+        ) ||
+        (
+          COLUMN_REGEX.test(error.details || '') &&
+          CREATED_AT_REGEX.test(error.details || '')
+        )
+      )
+  );
 
 export const useSupabaseData = (tableName) => {
   const [data, setData] = useState([]);
@@ -13,10 +31,21 @@ export const useSupabaseData = (tableName) => {
     try {
       setLoading(true);
       setError(null);
-      const { data: result, error } = await supabase
+      let { data: result, error } = await supabase
         .from(tableName)
         .select('*')
         .order('created_at', { ascending: false });
+
+      const missingCreatedAt = isCreatedAtColumnError(error);
+
+      if (missingCreatedAt) {
+        const fallbackResponse = await supabase
+          .from(tableName)
+          .select('*');
+
+        result = fallbackResponse.data;
+        error = fallbackResponse.error;
+      }
 
       if (error) throw error;
       setData(result || []);
