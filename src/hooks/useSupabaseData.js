@@ -13,10 +13,27 @@ export const useSupabaseData = (tableName) => {
     try {
       setLoading(true);
       setError(null);
-      const { data: result, error } = await supabase
+      let { data: result, error } = await supabase
         .from(tableName)
         .select('*')
         .order('created_at', { ascending: false });
+
+      const missingCreatedAt =
+        error &&
+        (
+          error.code === '42703' ||
+          error.message?.toLowerCase().includes('created_at') ||
+          error.details?.toLowerCase().includes('created_at')
+        );
+
+      if (missingCreatedAt) {
+        const fallbackResponse = await supabase
+          .from(tableName)
+          .select('*');
+
+        result = fallbackResponse.data;
+        error = fallbackResponse.error;
+      }
 
       if (error) throw error;
       setData(result || []);
