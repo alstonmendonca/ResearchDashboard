@@ -22,8 +22,14 @@ export const useSupabaseData = (tableName) => {
         error &&
         (
           error.code === '42703' ||
-          error.message?.toLowerCase().includes('created_at') ||
-          error.details?.toLowerCase().includes('created_at')
+          (
+            /column/i.test(error.message || '') &&
+            /created_at/i.test(error.message || '')
+          ) ||
+          (
+            /column/i.test(error.details || '') &&
+            /created_at/i.test(error.details || '')
+          )
         );
 
       if (missingCreatedAt) {
